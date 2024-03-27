@@ -1,0 +1,135 @@
+---
+title: "Milwaukee Bucks Shot Data Analysis"
+author: "Aaron Barton"
+font: 12pt
+date: "March 29th, 2024"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+# Load in necessary libraries
+library(devtools)
+library(tidyverse)
+library(ggplot2)
+library(gganimate)
+library(nbastatR)
+library(gt)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+# Fixes an error
+Sys.setenv("VROOM_CONNECTION_SIZE" = 131072 * 2)
+
+# Read in shot data for 5 seasons
+shots_2003 = teams_shots(teams = "Milwaukee Bucks", seasons = 2003)
+shots_2008 = teams_shots(teams = "Milwaukee Bucks", seasons = 2008)
+shots_2013 = teams_shots(teams = "Milwaukee Bucks", seasons = 2013)
+shots_2018 = teams_shots(teams = "Milwaukee Bucks", seasons = 2018)
+shots_2023 = teams_shots(teams = "Milwaukee Bucks", seasons = 2023)
+
+# Binds the datasets together
+Bucks_shots = rbind(shots_2003, shots_2008, shots_2013, shots_2018, shots_2023)
+
+# Converts shot locations into feet and shifts Y by 5 feet to have 0 be the end of the court
+Bucks_shots_feet = Bucks_shots %>% mutate(locationX = locationX/10, locationY = locationY/10 + 5) 
+```
+
+```{r include=FALSE}
+# Creates the basketball court. The code is from: https://gist.github.com/edkupfer/6354404
+court = ggplot(data=data.frame(x=1,y=1),aes(x,y))+
+   # outside box:
+geom_path(data=data.frame(x=c(-25,-25,25,25,-25),y=c(0,47,47,0,0)))+
+   # solid FT semicircle above FT line:
+geom_path(data=data.frame(x=c(-6000:(-1)/1000,1:6000/1000),y=c(19+sqrt(6^2-c(-6000:(-1)/1000,1:6000/1000)^2))),aes(x=x,y=y))+
+   # dashed FT semicircle below FT line:
+geom_path(data=data.frame(x=c(-6000:(-1)/1000,1:6000/1000),y=c(19-sqrt(6^2-c(-6000:(-1)/1000,1:6000/1000)^2))),aes(x=x,y=y),linetype='dashed')+
+   # key:
+geom_path(data=data.frame(x=c(-8,-8,8,8,-8),y=c(0,19,19,0,0)))+
+   # box inside the key:
+geom_path(data=data.frame(x=c(-6,-6,6,6,-6),y=c(0,19,19,0,0)))+
+   # restricted area semicircle:
+geom_path(data=data.frame(x=c(-4000:(-1)/1000,1:4000/1000),y=c(5.25+sqrt(4^2-c(-4000:(-1)/1000,1:4000/1000)^2))),aes(x=x,y=y))+
+   # halfcourt semicircle:
+geom_path(data=data.frame(x=c(-6000:(-1)/1000,1:6000/1000),y=c(47-sqrt(6^2-c(-6000:(-1)/1000,1:6000/1000)^2))),aes(x=x,y=y))+
+   # rim:
+geom_path(data=data.frame(x=c(-750:(-1)/1000,1:750/1000,750:1/1000,-1:-750/1000),y=c(c(5.25+sqrt(0.75^2-c(-750:(-1)/1000,1:750/1000)^2)),c(5.25-sqrt(0.75^2-c(750:1/1000,-1:-750/1000)^2)))),aes(x=x,y=y))+
+   # backboard:
+geom_path(data=data.frame(x=c(-3,3),y=c(4,4)),lineend='butt')+
+   # three-point line:
+geom_path(data=data.frame(x=c(-22,-22,-22000:(-1)/1000,1:22000/1000,22,22),y=c(0,169/12,5.25+sqrt(23.75^2-c(-22000:(-1)/1000,1:22000/1000)^2),169/12,0)),aes(x=x,y=y))+
+   # fix aspect ratio to 1:1
+coord_fixed()
+```
+
+```{r echo=FALSE, message=FALSE}
+# Color vector for the Bucks (cream color was changed to tan for better viewing) : https://teamcolorcodes.com/milwaukee-bucks-color-codes/#:~:text=The%20Milwaukee%20Bucks%20colors%20are,a%20team%20from%20Milwaukee%2C%20Wisconsin.
+Bucks_colors = c('#0077C0','#000000','#00471B','#AC1A2F','#95999D','tan','#702F8A')
+
+# Creates the animated graphic using the court plot and overlaying points with some modifications to titles, colors, and labels
+# Note: this takes a long time to render
+shot_graph = court + geom_point(data=Bucks_shots_feet, aes(x=locationX,y=locationY, shape = isShotMade, color = zoneBasic), alpha = 0.4) + transition_states(yearSeason, transition_length = 1, state_length = 3) + labs(title = 'Milwaukee Bucks Shot Positions', subtitle = 'Year: {closest_state}', x = "Horizontal Distance to Hoop (ft)", y = "Distance to Court End (ft)", shape = "Is the Shot Made?", color = "Zone") + scale_color_manual(values = Bucks_colors) + scale_shape_manual(values = c(4,19), labels = c("No", "Yes")) 
+shot_graph
+```
+\pagebreak
+
+### Findings
+
+* The graphic illustrates the Milwaukee Bucks shot positions from 2003 to 2023 in 5 year increments
+
+* The shots are colored by the specific zones on the court and an "x" is displayed on shots that were missed
+
+* As years progress, there are more shots taken behind the 3 point line and less shots taken in the mid-range zone
+
+* Shots directly straight from the hoop are more frequent
+
+* There is a strong cluster of shots right by the hoops position
+
+* Almost all back court shots are missed
+
+### Detailed Summary 
+
+  This animated graphic displays the Milwaukee Bucks shot positions from 2003, 2008, 2013, 2018, and 2023 to see if they change over time. These shot positions were overlaid on a NBA half court where code was used from https://gist.github.com/edkupfer/6354404. The zones were made using the Milwaukee Bucks current and previous colors. The points were displayed as an "x" for shots missed and a filled circle for shots made. The x-axis shows the distance in feet to the hoop where the negative values are on the left side of the court (from an outside perspective). However, the y-axis is based on the length of the court in feet where the hoop is positioned at five feet. From analyzing the graph, we see a larger proportion of shots taken behind the 3 point line and a decreasing density of points in the mid-range zone. We also notice there is typically a strong line of points in the paint directly straight from the hoop. Lastly, there is a strong cluster of shots taken in the restricted area by the hoop and almost all back court shots are missed.
+  
+```{r include=FALSE, message=FALSE}
+# Get whole team summary data for the 5 different years for the Bucks
+Bucks_summary_data = teams_annual_stats(teams = "Milwaukee Bucks", all_active_teams = F)
+```
+
+```{r echo=FALSE, message=FALSE}
+Bucks_summary_data2 = Bucks_summary_data %>% dplyr::filter(slugSeason %in% c("2002-03","2007-08", "2012-13", "2017-18", "2022-23"))
+
+# Find how many two point shots were made and make it a variable
+Bucks_summary_data3 = Bucks_summary_data2 %>% mutate(fg2m = fgm - fg3m)
+
+# Convert the shots to their point values
+Bucks_pts = Bucks_summary_data3 %>% mutate(pts_from_twos = 2*fg2m, pts_from_threes = 3*fg3m)
+
+# Select the needed columns and tidy the data in a graphable format
+Bucks_pts_clean = Bucks_pts %>% select("slugSeason", "ftm", "pts_from_twos", "pts_from_threes")
+Bucks_pts_tidy = Bucks_pts_clean %>% pivot_longer(cols=`ftm`:`pts_from_threes`, names_to="Shot Type", values_to="Points") 
+
+# Create a stacked bar chart that shows the amount of points from each shot type for the 5 years
+points_chart = ggplot(data = Bucks_pts_tidy, aes(x = slugSeason, y = Points, fill = `Shot Type`)) + geom_bar(stat = "identity", position = "stack") + scale_fill_manual(values = c('#AC1A2F','#00471B','tan'), labels = c("Points from Free Throws", "Points from Threes", "Points from Twos")) + labs(title = "Milwaukee Bucks Points by Shot Type", y = "Total Points", x = "Season") + geom_text(aes(label = Points), position = position_stack(vjust = 0.5), color = "black", size = 3)
+points_chart
+
+# Finds how many two point shots were made and makes it a variable
+Bucks_pct = Bucks_pts %>% mutate(pctFG2 = round((fgm-fg3m)/(fga - fg3a),3))
+
+# Select and rename the necessary columns
+Bucks_dec_table = Bucks_pct %>% select("slugSeason", "pctFT","pctFG2", "pctFG3")
+Bucks_pct_table = Bucks_dec_table %>% mutate(pctFT = pctFT*100, pctFG2 = pctFG2*100, pctFG3 = pctFG3*100)
+
+# Changes values to percents and displays using the gt package
+colnames(Bucks_pct_table) = c("Season","Percent of Free Throws Made", "Percent of 2-Point Shots Made","Percent of 3-Point Shots Made")
+Bucks_pct_table %>% gt()
+```
+
+### Findings and Summary
+
+  This graphic displays the total points from each shot type for the Milwaukee Bucks over the 5 seasons: 2003, 2008, 2013, 2018, 2023. This includes free throw shots which were not included in the original shot position graphic. Additionally, a table was included to show the percentages for shots to give more context into the graph. It appears that the total points scored by the Bucks has increased since 2013. For the shot types, the points and the percentage of free throws made are relatively consistent. However, the points from threes seem to be increasing since 2008 with there being a large increase in 2023. The table shows that the three point shots are made around the same percentage, so we can determine the increase is from players shooting more three point shots. Conversely, two point shots are relatively consistent until a slight dip in 2023. The table displays the players have gotten better at two point shots in 2018 and 2023, so we know the players are taking less two point shots in recent years.
