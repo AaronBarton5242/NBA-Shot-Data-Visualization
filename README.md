@@ -1,1 +1,1 @@
-This project displays the Milwaukee Bucks NBA shot location data over time through an animated graphic. An additional graphic was created to explore the breakdown of total points based on the shot type for each year.
+This project displays the Milwaukee Bucks NBA shot location data over time through an animated graphic. The findings were summarized and led to the creation of an additional graph that illustrates the point breakdown of each shot type over the years.
