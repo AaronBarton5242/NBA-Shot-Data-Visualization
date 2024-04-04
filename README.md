@@ -1,1 +1,1 @@
-Midterm project for the statistical computing course visually displaying NBA shot data over time
+This project displays the Milwaukee Bucks NBA shot location data over time through an animated graphic. An additional graphic was created to explore the breakdown of total points based on the shot type for each year.
